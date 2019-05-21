@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/IguteChung/flakbase/pkg/store"
 	"github.com/gorilla/websocket"
 )
 
@@ -28,10 +29,17 @@ func Run(config *Config) {
 		},
 	}
 
+	// create the datastore handler.
+	datastore, err := store.NewHandler()
+	if err != nil {
+		log.Fatalf("failed to new store handler: %v", err)
+	}
+
 	// generate the handler with config.
 	s := &handler{
-		Config:   config,
-		upgrader: upgrader,
+		Config:    config,
+		upgrader:  upgrader,
+		datastore: datastore,
 	}
 
 	// serve the http handler at root.

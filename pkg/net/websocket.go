@@ -29,7 +29,7 @@ func upgradable(header http.Header) bool {
 
 // readMessage reads a request from connection, automatically concats the splitted
 // chunks if the request payload too large.
-func readMessage(conn *websocket.Conn) (*data.Query, error) {
+func readMessage(conn *websocket.Conn) (*data.Request, error) {
 	// read message from client.
 	_, bytes, err := conn.ReadMessage()
 	if err != nil {
@@ -43,12 +43,12 @@ func readMessage(conn *websocket.Conn) (*data.Query, error) {
 	}
 
 	// finally return a request model by bytes.
-	toReq := func(bytes []byte) (*data.Query, error) {
-		var q *data.Query
-		if err := json.Unmarshal(bytes, &q); err != nil {
+	toReq := func(bytes []byte) (*data.Request, error) {
+		var r *data.Request
+		if err := json.Unmarshal(bytes, &r); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal to request: %v", err)
 		}
-		return q, nil
+		return r, nil
 	}
 
 	switch v := o.(type) {

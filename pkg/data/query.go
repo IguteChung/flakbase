@@ -15,8 +15,8 @@ const (
 	TypeRemove
 )
 
-// Query defines the constraints for retrieving data.
-type Query struct {
+// Request defines the database request from client.
+type Request struct {
 	// Type defines the query type.
 	Type int
 
@@ -27,9 +27,14 @@ type Query struct {
 
 	// Data defines the update payload if type is Set or Update.
 	Data interface{}
+	// Query defines the query for Listen or Unlisten.
+	Query Query
+}
 
-	// QueryID defines the id of query if type is Listen.
-	QueryID int64
+// Query defines the filter and order when retrieving data.
+type Query struct {
+	// ID defines the id of query if type is Listen.
+	ID int64
 	// StartAt defines the value of start, should be with OrderBy.
 	StartAt interface{}
 	// StartKey defines the key of start.
@@ -86,7 +91,7 @@ type r struct {
 }
 
 // UnmarshalJSON overrides the json.Unmarshal for Query struct.
-func (q *Query) UnmarshalJSON(bytes []byte) error {
+func (req *Request) UnmarshalJSON(bytes []byte) error {
 	// unmarshal the bytes into internal model.
 	var r *r
 	if err := json.Unmarshal(bytes, &r); err != nil {
@@ -107,32 +112,32 @@ func (q *Query) UnmarshalJSON(bytes []byte) error {
 	// check the query type.
 	switch r.D.A {
 	case "l", "q":
-		q.Type = TypeListen
+		req.Type = TypeListen
 	case "n":
-		q.Type = TypeUnlisten
+		req.Type = TypeUnlisten
 	case "m":
-		q.Type = TypeUpdate
+		req.Type = TypeUpdate
 	case "p":
-		q.Type = TypeSet
+		req.Type = TypeSet
 	default:
 		return fmt.Errorf("invalid type: %s", r.D.A)
 	}
 
 	// convert the internal model to Query.
-	q.RequestID = r.D.R
-	q.Ref = r.D.B.P
-	q.Data = r.D.B.D
-	q.QueryID = r.D.B.T
+	req.RequestID = r.D.R
+	req.Ref = r.D.B.P
+	req.Data = r.D.B.D
+	req.Query.ID = r.D.B.T
 
 	// convert query parameters.
 	if r.D.B.Q != nil {
-		q.StartAt = r.D.B.Q.SP
-		q.StartKey = r.D.B.Q.SN
-		q.EndAt = r.D.B.Q.EP
-		q.EndKey = r.D.B.Q.EN
-		q.OrderBy = r.D.B.Q.I
-		q.Limit = r.D.B.Q.L
-		q.LimitOrder = r.D.B.Q.VF
+		req.Query.StartAt = r.D.B.Q.SP
+		req.Query.StartKey = r.D.B.Q.SN
+		req.Query.EndAt = r.D.B.Q.EP
+		req.Query.EndKey = r.D.B.Q.EN
+		req.Query.OrderBy = r.D.B.Q.I
+		req.Query.Limit = r.D.B.Q.L
+		req.Query.LimitOrder = r.D.B.Q.VF
 	}
 
 	return nil
