@@ -10,6 +10,7 @@ import (
 const (
 	TypeListen = iota
 	TypeUnlisten
+	TypeGet
 	TypeSet
 	TypeUpdate
 	TypeRemove

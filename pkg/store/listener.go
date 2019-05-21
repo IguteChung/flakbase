@@ -50,7 +50,6 @@ func (l *listeners) find(updatedRefs ...string) []string {
 	for ref := range l.l {
 		for _, updatedRef := range updatedRefs {
 			refPath, updatedRefPath := ref+"/", updatedRef+"/"
-			// log.Println("frank find ", refPath, updatedRefPath)
 			if ref == "/" || strings.HasPrefix(refPath, updatedRefPath) || strings.HasPrefix(updatedRefPath, refPath) {
 				refs = append(refs, ref)
 				break

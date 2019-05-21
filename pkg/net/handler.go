@@ -2,9 +2,11 @@ package net
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,6 +30,24 @@ func (s *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
+	// check restful api supported.
+	if s.Rest {
+		// TODO: enable cors now.
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+
+		if err := s.serveRestful(ctx, w, r); err != nil {
+			// not handled error.
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		}
+		return
+	}
+
+	// restful not supported.
+	w.WriteHeader(http.StatusNotImplemented)
+	w.Write([]byte("Restful api not supported\n"))
 }
 
 func (s *handler) serveWebsocket(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
@@ -93,4 +113,62 @@ func (s *handler) serveWebsocket(ctx context.Context, w http.ResponseWriter, r *
 			return fmt.Errorf("failed to send ok message: %v", err)
 		}
 	}
+}
+
+func (s *handler) serveRestful(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+	// check url is valid.
+	u := r.URL.Path
+	if !strings.HasSuffix(u, ".json") {
+		return fmt.Errorf("invalid path %s, should end with .json", u)
+	}
+
+	// truncate .json to get path ref.
+	ref := u[:len(u)-len(".json")]
+
+	// handle the request by method.
+	switch r.Method {
+	case http.MethodGet:
+		query, err := ParseQuery(r.URL.Query())
+		if err != nil {
+			return fmt.Errorf("invalid query: %v", err)
+		}
+
+		// get the data from store.
+		data, err := s.datastore.HandleGet(ctx, ref, *query)
+		if err != nil {
+			return fmt.Errorf("failed to handle get %s: %v", ref, err)
+		}
+
+		// marshal the data to bytes for response.
+		bytes, err := json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("failed to marshal response: %v", err)
+		}
+		w.Write(bytes)
+	case http.MethodPut, http.MethodPatch:
+		// decode the json body for set or update.
+		var data interface{}
+		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+			return fmt.Errorf("failed to unmarshal body: %v", err)
+		}
+
+		// call set or update according to method.
+		if r.Method == http.MethodPut {
+			if err := s.datastore.HandleSet(ctx, ref, data); err != nil {
+				return fmt.Errorf("failed to handle set %s: %v", ref, err)
+			}
+		} else {
+			if err := s.datastore.HandleUpdate(ctx, ref, data); err != nil {
+				return fmt.Errorf("failed to handle update %s: %v", ref, err)
+			}
+		}
+	case http.MethodDelete:
+		if err := s.datastore.HandleSet(ctx, ref, nil); err != nil {
+			return fmt.Errorf("failed to handle remove %s: %v", ref, err)
+		}
+	default:
+		return fmt.Errorf("not supported method: %s", r.Method)
+	}
+
+	return nil
 }

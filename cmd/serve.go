@@ -22,7 +22,7 @@ var cmdServe = &cobra.Command{
 func init() {
 	cmdServe.Flags().BoolVarP(&flagRest, "rest", "r", false, "enable Flakbase restful api")
 	cmdServe.Flags().StringVarP(&flagPort, "port", "p", ":5000", "port to serve")
-	cmdServe.Flags().StringVarP(&flagHost, "host", "h", "localhost", "host name to serve")
+	cmdServe.Flags().StringVarP(&flagHost, "host", "", "localhost", "host name to serve")
 }
 
 func serve(cmd *cobra.Command, args []string) {
