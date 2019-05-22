@@ -11,9 +11,10 @@ import (
 
 // Config defines the args for a Flakbase server.
 type Config struct {
-	Host string
-	Port string
-	Rest bool
+	Host  string
+	Port  string
+	Rest  bool
+	Mongo string
 }
 
 // Run establishes a http server to handle websocket and rest api.
@@ -30,7 +31,9 @@ func Run(config *Config) {
 	}
 
 	// create the datastore handler.
-	datastore, err := store.NewHandler()
+	datastore, err := store.NewHandler(&store.Config{
+		Mongo: config.Mongo,
+	})
 	if err != nil {
 		log.Fatalf("failed to new store handler: %v", err)
 	}

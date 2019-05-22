@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"github.com/IguteChung/flakbase/pkg/data"
+	"github.com/IguteChung/flakbase/pkg/db"
 	"github.com/IguteChung/flakbase/pkg/db/memory"
+	"github.com/IguteChung/flakbase/pkg/db/mongodb"
 )
 
 // ListenResult defines the result of handling.
@@ -31,12 +33,25 @@ type Handler interface {
 	Reset(ctx context.Context) error
 }
 
+// Config defines the config to create handler.
+type Config struct {
+	Mongo string
+}
+
 // NewHandler creates a Handler.
-func NewHandler() (Handler, error) {
+func NewHandler(c *Config) (Handler, error) {
+	// decide the db to use by config.
+	var db db.DB
+	if c.Mongo != "" {
+		db = mongodb.NewDB(c.Mongo)
+	} else {
+		db = memory.NewDB()
+	}
+
 	return &handler{
 		l: &listeners{
 			l: map[string]map[ListenChannel]map[data.Query]bool{},
 		},
-		db: memory.NewDB(),
+		db: db,
 	}, nil
 }

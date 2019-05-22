@@ -86,10 +86,22 @@ type handlerSuite struct {
 	handler Handler
 }
 
-func TestHandlerSuite(t *testing.T) {
-	handler, err := NewHandler()
+func TestMemoryHandlerSuite(t *testing.T) {
+	handler, err := NewHandler(&Config{})
 	if err != nil {
-		t.Fatalf("unable to new handler: %v", err)
+		t.Fatalf("unable to new memory handler: %v", err)
+	}
+	suite.Run(t, &handlerSuite{
+		handler: handler,
+	})
+}
+
+func TestMongoHandlerSuite(t *testing.T) {
+	handler, err := NewHandler(&Config{
+		Mongo: "mongodb://localhost:27017",
+	})
+	if err != nil {
+		t.Fatalf("unable to new mongo handler: %v", err)
 	}
 	suite.Run(t, &handlerSuite{
 		handler: handler,
