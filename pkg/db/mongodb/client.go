@@ -403,9 +403,9 @@ func (c *client) getWithQuery(ctx context.Context, ref string, query data.Query)
 		// if index equals, sort by key.
 		sort := bson.D{}
 		if index != "" && index != "_id" {
-			sort = append(sort, bson.E{index, sortOrder})
+			sort = append(sort, bson.E{Key: index, Value: sortOrder})
 		}
-		sort = append(sort, bson.E{"_id", sortOrder})
+		sort = append(sort, bson.E{Key: "_id", Value: sortOrder})
 		option = options.Find().SetSort(sort).SetLimit(int64(query.Limit))
 	}
 

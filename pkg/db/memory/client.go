@@ -114,8 +114,24 @@ func queryOnData(data interface{}, query data.Query) interface{} {
 		case "":
 			// do nothing
 		default:
-			if child, ok := v.(map[string]interface{}); ok {
-				index = child[query.OrderBy]
+			// support nested query.
+			ptr := v
+			orderBys := strings.Split(query.OrderBy, ".")
+			for i, orderBy := range orderBys {
+				if orderBy == "" {
+					// leading space.
+					continue
+				}
+
+				if ptrMap, ok := ptr.(map[string]interface{}); ok {
+					if i == len(orderBys)-1 {
+						// pick the index from child.
+						index = ptrMap[orderBy]
+						break
+					}
+					// move ptr to child.
+					ptr = ptrMap[orderBy]
+				}
 			}
 		}
 

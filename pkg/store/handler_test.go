@@ -16,7 +16,7 @@ func doc(id ...string) map[string]interface{} {
 			"const":  "value",
 			"number": float64(1),
 			"map": map[string]interface{}{
-				"key": "value",
+				"key": "value1",
 			},
 		},
 		"id2": map[string]interface{}{
@@ -24,7 +24,7 @@ func doc(id ...string) map[string]interface{} {
 			"const":  "value",
 			"number": float64(2),
 			"map": map[string]interface{}{
-				"key": "value",
+				"key": "value2",
 			},
 		},
 		"id3": map[string]interface{}{
@@ -32,7 +32,7 @@ func doc(id ...string) map[string]interface{} {
 			"const":  "value",
 			"number": float64(3),
 			"map": map[string]interface{}{
-				"key": "value",
+				"key": "value3",
 			},
 		},
 		"id4": map[string]interface{}{
@@ -40,7 +40,7 @@ func doc(id ...string) map[string]interface{} {
 			"const":  "value",
 			"number": float64(4),
 			"map": map[string]interface{}{
-				"key": "value",
+				"key": "value4",
 			},
 		},
 	}
@@ -172,7 +172,7 @@ func (s *handlerSuite) TestInsertDocumentByUpdate() {
 		"/path/id2/const":  "value",
 		"/path/id2/number": float64(2),
 		"/path/id2/map": map[string]interface{}{
-			"key": "value",
+			"key": "value2",
 		},
 	}))
 
@@ -182,7 +182,7 @@ func (s *handlerSuite) TestInsertDocumentByUpdate() {
 		"text":  "revised",
 		"const": "value",
 		"map": map[string]interface{}{
-			"key": "value",
+			"key": "value1",
 		},
 	}, resp)
 
@@ -238,7 +238,7 @@ func (s *handlerSuite) TestUpdateDocumentField() {
 			"const":  "value",
 			"number": float64(1),
 			"map": map[string]interface{}{
-				"key": "value",
+				"key": "value1",
 			},
 		},
 	}
@@ -295,14 +295,14 @@ func (s *handlerSuite) TestUpdateMultipleDocumentsFields() {
 			"const":  "value",
 			"number": float64(1),
 			"map": map[string]interface{}{
-				"key": "value",
+				"key": "value1",
 			},
 		},
 		"id2": map[string]interface{}{
 			"const":  "value",
 			"number": float64(2),
 			"map": map[string]interface{}{
-				"key": "value",
+				"key": "value2",
 			},
 		},
 		"id3": map[string]interface{}{
@@ -310,7 +310,7 @@ func (s *handlerSuite) TestUpdateMultipleDocumentsFields() {
 			"const":  "value",
 			"number": float64(3),
 			"map": map[string]interface{}{
-				"key": "value",
+				"key": "value3",
 			},
 		},
 		"id4": map[string]interface{}{
@@ -318,7 +318,7 @@ func (s *handlerSuite) TestUpdateMultipleDocumentsFields() {
 			"const":  "value",
 			"number": float64(4),
 			"map": map[string]interface{}{
-				"key": "value",
+				"key": "value4",
 			},
 		},
 	}
@@ -546,6 +546,17 @@ func (s *handlerSuite) TestOrderPreviousPageQuery() {
 		EndKey:     "id3",
 		Limit:      2,
 		LimitOrder: "r",
+	}, map[string]interface{}{
+		"id2": doc("id2"),
+		"id3": doc("id3"),
+	})
+}
+
+func (s *handlerSuite) TestNestedQuery() {
+	s.testQuery(data.Query{
+		OrderBy: "map.key",
+		StartAt: "value2",
+		EndAt:   "value3",
 	}, map[string]interface{}{
 		"id2": doc("id2"),
 		"id3": doc("id3"),
