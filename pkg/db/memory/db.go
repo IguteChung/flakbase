@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/IguteChung/flakbase/pkg/db"
+	"github.com/IguteChung/flakbase/pkg/rules"
 )
 
 type memory struct {
@@ -14,6 +15,10 @@ type memory struct {
 
 func (m *memory) Connect(ctx context.Context) (db.Client, error) {
 	return &client{memory: m}, nil
+}
+
+func (m *memory) SetRules(r rules.Rules) {
+	// do nothing now.
 }
 
 // NewDB creates a memory DB for Flakbase.

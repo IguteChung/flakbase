@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"path"
 	"path/filepath"
 	"strings"
 
 	"github.com/IguteChung/flakbase/pkg/data"
+	"github.com/IguteChung/flakbase/pkg/rules"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -31,6 +33,7 @@ type dataSnap struct {
 
 type client struct {
 	*mongo.Client
+	rules rules.Rules
 }
 
 func (c *client) Close() error {
@@ -57,8 +60,7 @@ func (c *client) Set(ctx context.Context, ref string, data interface{}) error {
 	// detect the data's type, use strings.Join to guarantee first slash.
 	coll, id := strings.Join(paths[:lenPaths-1], "/"), paths[lenPaths-1]
 
-	// TODO: check security rules.
-	if v, ok := data.(map[string]interface{}); ok {
+	if v, ok := data.(map[string]interface{}); ok && c.canInsert(coll, id) {
 		// insert or replace a document.
 		if err := c.insertDocument(ctx, coll, id, v); err != nil {
 			return fmt.Errorf("failed to insert document to collection %s: %v", coll, err)
@@ -76,7 +78,10 @@ func (c *client) Set(ctx context.Context, ref string, data interface{}) error {
 		// use strings.Join to guarantee first slash.
 		coll, id, field := strings.Join(paths[:lenPaths-2], "/"), paths[lenPaths-2], paths[lenPaths-1]
 
-		// TODO: check security rule.
+		// check security rule.
+		if !c.canInsert(coll, id) {
+			return fmt.Errorf("cannot insert to %s", coll)
+		}
 
 		// insert a parent document to contain the primary field.
 		document := map[string]interface{}{field: data}
@@ -186,9 +191,8 @@ func (c *client) insertDocument(ctx context.Context, coll, id string, data inter
 	}
 
 	// if the collection is inserted first time, create index for the collection.
-	if result.UpsertedCount > 0 {
-		// TODO: create indexes
-		// go s.createIndex(context.Background(), coll)
+	if indexes := c.rules.Indexes(); len(indexes) > 0 && result.UpsertedCount > 0 {
+		go c.createIndex(context.Background(), coll, indexes)
 	}
 
 	return nil
@@ -441,4 +445,20 @@ func (c *client) getWithQuery(ctx context.Context, ref string, query data.Query)
 	return &dataSnap{
 		val: documents,
 	}, nil
+}
+
+func (c *client) createIndex(ctx context.Context, ref string, indexes []string) {
+	// create indexes for collection.
+	indexModels := make([]mongo.IndexModel, len(indexes))
+	for i, index := range indexes {
+		indexModels[i] = mongo.IndexModel{
+			Keys: bson.M{index: 1},
+		}
+	}
+	result, err := c.Database(flakbase).Collection(hash(ref)).Indexes().CreateMany(ctx, indexModels)
+	if err != nil {
+		log.Printf("failed to create index for %s: %v", ref, err)
+		return
+	}
+	log.Printf("index %+v created for %s", result, ref)
 }

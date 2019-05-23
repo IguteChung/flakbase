@@ -14,6 +14,7 @@ type Config struct {
 	Host  string
 	Port  string
 	Rest  bool
+	Rule  string
 	Mongo string
 }
 
@@ -33,6 +34,7 @@ func Run(config *Config) {
 	// create the datastore handler.
 	datastore, err := store.NewHandler(&store.Config{
 		Mongo: config.Mongo,
+		Rule:  config.Rule,
 	})
 	if err != nil {
 		log.Fatalf("failed to new store handler: %v", err)

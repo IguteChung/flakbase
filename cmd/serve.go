@@ -11,6 +11,7 @@ var (
 	flagRest  bool
 	flagPort  string
 	flagMongo string
+	flagRule  string
 )
 
 var cmdServe = &cobra.Command{
@@ -25,12 +26,14 @@ func init() {
 	cmdServe.Flags().StringVarP(&flagPort, "port", "p", ":5000", "port to serve")
 	cmdServe.Flags().StringVarP(&flagHost, "host", "", "localhost", "host name to serve")
 	cmdServe.Flags().StringVarP(&flagMongo, "mongo", "m", "", "mongodb url to use")
+	cmdServe.Flags().StringVarP(&flagRule, "rule", "", "", "security rule json file")
 }
 
 func serve(cmd *cobra.Command, args []string) {
 	net.Run(&net.Config{
 		Rest:  flagRest,
 		Port:  flagPort,
+		Rule:  flagRule,
 		Mongo: flagMongo,
 	})
 }

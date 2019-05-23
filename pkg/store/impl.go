@@ -118,6 +118,9 @@ func (s *handler) Reset(ctx context.Context) error {
 	// clean the listener.
 	s.l.clean()
 
+	// clean db rules.
+	s.db.SetRules(nil)
+
 	// connect to db.
 	client, err := s.db.Connect(ctx)
 	if err != nil {

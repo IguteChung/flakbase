@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/IguteChung/flakbase/pkg/data"
+	"github.com/IguteChung/flakbase/pkg/rules"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -162,7 +163,7 @@ func (s *handlerSuite) TestInsertMultipleDocuments() {
 	s.EqualValues("value1", resp)
 }
 
-func (s *handlerSuite) TestInsertDocumentByUpdate() {
+func (s *handlerSuite) TestInsertDocumentByUpdatePrimary() {
 	ctx := context.Background()
 	s.NoError(s.handler.HandleSet(ctx, "/path/id1", doc("id1")))
 	s.NoError(s.handler.HandleUpdate(ctx, "/", map[string]interface{}{
@@ -171,9 +172,6 @@ func (s *handlerSuite) TestInsertDocumentByUpdate() {
 		"/path/id2/text":   "value2",
 		"/path/id2/const":  "value",
 		"/path/id2/number": float64(2),
-		"/path/id2/map": map[string]interface{}{
-			"key": "value2",
-		},
 	}))
 
 	resp, err := s.handler.HandleGet(ctx, "/path/id1", data.Query{})
@@ -188,7 +186,11 @@ func (s *handlerSuite) TestInsertDocumentByUpdate() {
 
 	resp, err = s.handler.HandleGet(ctx, "/path/id2", data.Query{})
 	s.NoError(err)
-	s.EqualValues(doc("id2"), resp)
+	s.EqualValues(map[string]interface{}{
+		"text":   "value2",
+		"const":  "value",
+		"number": float64(2),
+	}, resp)
 }
 
 func (s *handlerSuite) TestReplaceDocument() {
@@ -587,4 +589,40 @@ func (s *handlerSuite) TestShallowRoot() {
 	resp, err = s.handler.HandleGet(ctx, "/path1/path2/id1", data.Query{Shallow: true})
 	s.NoError(err)
 	s.EqualValues(doc("id1"), resp)
+}
+
+func (s *handlerSuite) TestInsertDocumentByUpdateWithRules() {
+	s.handler.(*handler).db.SetRules(rules.Rules{
+		"path": map[string]interface{}{
+			"$id": map[string]interface{}{
+				"$other": map[string]interface{}{
+					".validate": "false",
+				},
+			},
+		},
+	})
+	ctx := context.Background()
+	s.NoError(s.handler.HandleSet(ctx, "/path/id1", doc("id1")))
+	s.NoError(s.handler.HandleUpdate(ctx, "/", map[string]interface{}{
+		"/path/id2/field1": map[string]interface{}{
+			"key1": "value1",
+		},
+		"/path/id2/field2": map[string]interface{}{
+			"key2": "value2",
+		},
+	}))
+
+	resp, err := s.handler.HandleGet(ctx, "/path", data.Query{})
+	s.NoError(err)
+	s.EqualValues(map[string]interface{}{
+		"id1": doc("id1"),
+		"id2": map[string]interface{}{
+			"field1": map[string]interface{}{
+				"key1": "value1",
+			},
+			"field2": map[string]interface{}{
+				"key2": "value2",
+			},
+		},
+	}, resp)
 }

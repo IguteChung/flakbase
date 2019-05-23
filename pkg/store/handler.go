@@ -2,11 +2,13 @@ package store
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/IguteChung/flakbase/pkg/data"
 	"github.com/IguteChung/flakbase/pkg/db"
 	"github.com/IguteChung/flakbase/pkg/db/memory"
 	"github.com/IguteChung/flakbase/pkg/db/mongodb"
+	"github.com/IguteChung/flakbase/pkg/rules"
 )
 
 // ListenResult defines the result of handling.
@@ -36,6 +38,7 @@ type Handler interface {
 // Config defines the config to create handler.
 type Config struct {
 	Mongo string
+	Rule  string
 }
 
 // NewHandler creates a Handler.
@@ -47,6 +50,15 @@ func NewHandler(c *Config) (Handler, error) {
 	} else {
 		db = memory.NewDB()
 	}
+
+	// load security rules if specified.
+	r, err := rules.Import(c.Rule)
+	if err != nil {
+		return nil, fmt.Errorf("failed to import security rule %s: %v", c.Rule, err)
+	}
+
+	// set the db rules.
+	db.SetRules(r.Child("rules"))
 
 	return &handler{
 		l: &listeners{

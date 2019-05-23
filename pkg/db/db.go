@@ -5,12 +5,15 @@ import (
 	"io"
 
 	"github.com/IguteChung/flakbase/pkg/data"
+	"github.com/IguteChung/flakbase/pkg/rules"
 )
 
 // DB defines the database interface for Flakbase.
 type DB interface {
 	// Connect prepares the DB client.
 	Connect(ctx context.Context) (Client, error)
+	// SetRules sets the security rules of DB.
+	SetRules(r rules.Rules)
 }
 
 // Client defines the database client to set/get data.
