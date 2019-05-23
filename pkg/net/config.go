@@ -9,10 +9,12 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// DefaultPort defines the default port for Flakbase.
+const DefaultPort = ":9527"
+
 // Config defines the args for a Flakbase server.
 type Config struct {
 	Host  string
-	Port  string
 	Rest  bool
 	Rule  string
 	Mongo string
@@ -49,7 +51,7 @@ func Run(config *Config) {
 
 	// serve the http handler at root.
 	http.Handle("/", s)
-	if err := http.ListenAndServe(config.Port, nil); err != nil {
+	if err := http.ListenAndServe(DefaultPort, nil); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }

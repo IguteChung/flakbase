@@ -23,8 +23,7 @@ var cmdServe = &cobra.Command{
 
 func init() {
 	cmdServe.Flags().BoolVarP(&flagRest, "rest", "r", false, "enable Flakbase restful api")
-	cmdServe.Flags().StringVarP(&flagPort, "port", "p", ":5000", "port to serve")
-	cmdServe.Flags().StringVarP(&flagHost, "host", "", "localhost", "host name to serve")
+	cmdServe.Flags().StringVarP(&flagHost, "host", "", "localhost:9527", "host name to serve")
 	cmdServe.Flags().StringVarP(&flagMongo, "mongo", "m", "", "mongodb url to use")
 	cmdServe.Flags().StringVarP(&flagRule, "rule", "", "", "security rule json file")
 }
@@ -32,7 +31,7 @@ func init() {
 func serve(cmd *cobra.Command, args []string) {
 	net.Run(&net.Config{
 		Rest:  flagRest,
-		Port:  flagPort,
+		Host:  flagHost,
 		Rule:  flagRule,
 		Mongo: flagMongo,
 	})

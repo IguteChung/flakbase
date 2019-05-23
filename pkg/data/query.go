@@ -8,7 +8,8 @@ import (
 
 // Types for all Query.
 const (
-	TypeListen = iota
+	TypeUnknown = iota
+	TypeListen
 	TypeUnlisten
 	TypeGet
 	TypeSet
@@ -121,7 +122,8 @@ func (req *Request) UnmarshalJSON(bytes []byte) error {
 	case "p":
 		req.Type = TypeSet
 	default:
-		return fmt.Errorf("invalid type: %s", r.D.A)
+		req.Type = TypeUnknown
+		return nil
 	}
 
 	// convert the internal model to Query.

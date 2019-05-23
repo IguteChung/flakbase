@@ -68,7 +68,7 @@ func (s *handler) serveWebsocket(ctx context.Context, w http.ResponseWriter, r *
 	}
 
 	// send initial message.
-	if err := send(data.InitMessage{Now: time.Now(), Host: s.Host + s.Port}); err != nil {
+	if err := send(data.InitMessage{Now: time.Now(), Host: s.Host}); err != nil {
 		return fmt.Errorf("failed to send initial message: %v", err)
 	}
 
