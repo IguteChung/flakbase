@@ -33,6 +33,20 @@ func (i InitMessage) Format() O {
 	}
 }
 
+// IdleMessage defines the response message when idle event received.
+type IdleMessage struct{}
+
+// Format formats a message into response.
+func (i IdleMessage) Format() O {
+	return O{
+		"d": O{
+			"t": "o",
+			"d": nil,
+		},
+		"t": "c",
+	}
+}
+
 // OkMessage defines the response message when request is handled.
 type OkMessage struct {
 	RequestID int64

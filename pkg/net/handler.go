@@ -81,6 +81,8 @@ func (s *handler) serveWebsocket(ctx context.Context, w http.ResponseWriter, r *
 		r, err := readMessage(conn)
 		if err != nil {
 			return fmt.Errorf("failed to read message: %v", err)
+		} else if r == nil {
+			continue
 		}
 		log.Printf("[message received] %+v: %+v", conn.RemoteAddr(), r)
 
@@ -96,6 +98,12 @@ func (s *handler) serveWebsocket(ctx context.Context, w http.ResponseWriter, r *
 			defer s.datastore.HandleUnlisten(ctx, r.Ref, r.Query, ch)
 		case data.TypeUnlisten:
 			err = s.datastore.HandleUnlisten(ctx, r.Ref, r.Query, ch)
+		case data.TypeIdle:
+			// send idle message.
+			if err := send(data.IdleMessage{}); err != nil {
+				return fmt.Errorf("failed to send idle message: %v", err)
+			}
+			continue
 		}
 		if err != nil {
 			return fmt.Errorf("failed to handle request %+v: %v", r, err)

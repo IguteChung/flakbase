@@ -15,6 +15,7 @@ const (
 	TypeSet
 	TypeUpdate
 	TypeRemove
+	TypeIdle
 )
 
 // Request defines the database request from client.
@@ -63,6 +64,8 @@ type r struct {
 		A string `json:"a"`
 		// R indicates the request ID.
 		R int64 `json:"r"`
+		// T is unknown field, maybe means client is idle.
+		T string `json:"t"`
 		// B indicates the body content for the request.
 		B *struct {
 			// P indicates the Firebase reference path.
@@ -103,12 +106,18 @@ func (req *Request) UnmarshalJSON(bytes []byte) error {
 	// validate the internal model.
 	if r == nil {
 		return errors.New("missing request")
-	} else if r.T != "d" {
+	} else if r.T != "d" && r.T != "c" {
 		return fmt.Errorf("invalid r.t: %s", r.T)
 	} else if r.D == nil {
 		return errors.New("missing r.d")
 	} else if r.D.B == nil {
 		return errors.New("missing r.d.b")
+	}
+
+	// check if idle message.
+	if r.T == "c" && r.D != nil && r.D.T == "p" {
+		req.Type = TypeIdle
+		return nil
 	}
 
 	// check the query type.
