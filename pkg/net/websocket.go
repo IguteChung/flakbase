@@ -3,6 +3,7 @@ package net
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/IguteChung/flakbase/pkg/data"
@@ -46,7 +47,8 @@ func readMessage(conn *websocket.Conn) (*data.Request, error) {
 	toReq := func(bytes []byte) (*data.Request, error) {
 		var r *data.Request
 		if err := json.Unmarshal(bytes, &r); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal to request: %v", err)
+			log.Printf("failed to unmarshal to request: %v", err)
+			return nil, nil
 		}
 		return r, nil
 	}

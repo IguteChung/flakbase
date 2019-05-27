@@ -110,8 +110,6 @@ func (req *Request) UnmarshalJSON(bytes []byte) error {
 		return fmt.Errorf("invalid r.t: %s", r.T)
 	} else if r.D == nil {
 		return errors.New("missing r.d")
-	} else if r.D.B == nil {
-		return errors.New("missing r.d.b")
 	}
 
 	// check if idle message.
@@ -131,8 +129,11 @@ func (req *Request) UnmarshalJSON(bytes []byte) error {
 	case "p":
 		req.Type = TypeSet
 	default:
-		req.Type = TypeUnknown
-		return nil
+		return fmt.Errorf("unknown r.D.A: %s", r.D.A)
+	}
+
+	if r.D.B == nil {
+		return fmt.Errorf("missing r.D.B")
 	}
 
 	// convert the internal model to Query.
