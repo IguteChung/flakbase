@@ -16,12 +16,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const (
-	// flakbase defines the namespace of Flakbase in mongodb.
-	flakbase  = "flakbase"
-	collTable = "flakbase-collection"
-)
-
 // errNotFound implies the error for document not found.
 var errNotFound = errors.New("not found")
 
@@ -33,11 +27,23 @@ type dataSnap struct {
 
 type client struct {
 	*mongo.Client
-	rules rules.Rules
+	rules     rules.Rules
+	database  string
+	collTable string
 }
 
 func (c *client) Close() error {
 	return c.Disconnect(context.Background())
+}
+
+// Database gets the database in mongodb.
+func (c *client) Database() *mongo.Database {
+	return c.Client.Database(c.database)
+}
+
+// CollectionTable gets the collection mapping table in mongodb.
+func (c *client) CollectionTable() *mongo.Collection {
+	return c.Database().Collection(c.collTable)
 }
 
 func (c *client) Set(ctx context.Context, ref string, data interface{}) error {
@@ -67,7 +73,7 @@ func (c *client) Set(ctx context.Context, ref string, data interface{}) error {
 		}
 	} else if data == nil {
 		// delete the document.
-		if _, err := c.Database(flakbase).Collection(hash(coll)).DeleteOne(ctx, bson.M{"_id": id}); err != nil {
+		if _, err := c.Database().Collection(hash(coll)).DeleteOne(ctx, bson.M{"_id": id}); err != nil {
 			return fmt.Errorf("failed to delete document %s in collections %s: %v", id, coll, err)
 		}
 	} else {
@@ -123,7 +129,7 @@ func (c *client) Get(ctx context.Context, ref string, query data.Query) (interfa
 }
 
 func (c *client) Reset(ctx context.Context) error {
-	return c.Database(flakbase).Drop(ctx)
+	return c.Database().Drop(ctx)
 }
 
 // updateAncestor tries to update the field of existed document,
@@ -138,7 +144,7 @@ func (c *client) updateAncestor(ctx context.Context, ref string, data interface{
 
 	// try find one ancestor collection.
 	var collection bson.M
-	if err := c.Database(flakbase).Collection(collTable).FindOne(ctx, bson.M{"_id": bson.M{"$in": subPaths}}).Decode(&collection); err == mongo.ErrNoDocuments {
+	if err := c.Database().Collection(c.collTable).FindOne(ctx, bson.M{"_id": bson.M{"$in": subPaths}}).Decode(&collection); err == mongo.ErrNoDocuments {
 		// ancestor collection not found.
 		return errNotFound
 	} else if err != nil {
@@ -166,7 +172,7 @@ func (c *client) updateAncestor(ctx context.Context, ref string, data interface{
 	}
 
 	// update the field in ancestor document.
-	result, err := c.Database(flakbase).Collection(hash).UpdateOne(ctx, bson.M{"_id": id}, update)
+	result, err := c.Database().Collection(hash).UpdateOne(ctx, bson.M{"_id": id}, update)
 	if err != nil {
 		return fmt.Errorf("failed to update document %s in collection %s: %v", id, coll, err)
 	} else if result.MatchedCount == 0 {
@@ -179,13 +185,13 @@ func (c *client) updateAncestor(ctx context.Context, ref string, data interface{
 func (c *client) insertDocument(ctx context.Context, coll, id string, data interface{}) error {
 	// insert the document to collection.
 	hash := hash(coll)
-	if _, err := c.Database(flakbase).Collection(hash).
+	if _, err := c.Database().Collection(hash).
 		ReplaceOne(ctx, bson.M{"_id": id}, data, options.Replace().SetUpsert(true)); err != nil {
 		return fmt.Errorf("failed to replace document %s in collection %s: %v", id, coll, err)
 	}
 
 	// insert the collection entry in collection table.
-	result, err := c.Database(flakbase).Collection(collTable).ReplaceOne(ctx, bson.M{"_id": coll}, bson.M{"hash": hash}, options.Replace().SetUpsert(true))
+	result, err := c.CollectionTable().ReplaceOne(ctx, bson.M{"_id": coll}, bson.M{"hash": hash}, options.Replace().SetUpsert(true))
 	if err != nil {
 		return fmt.Errorf("failed to update collection table %s: %v", coll, err)
 	}
@@ -200,7 +206,7 @@ func (c *client) insertDocument(ctx context.Context, coll, id string, data inter
 
 func (c *client) getFromRef(ctx context.Context, ref string, query data.Query) (*dataSnap, error) {
 	var collection bson.M
-	if err := c.Database(flakbase).Collection(collTable).FindOne(ctx, bson.M{"_id": ref}).Decode(&collection); err == mongo.ErrNoDocuments {
+	if err := c.CollectionTable().FindOne(ctx, bson.M{"_id": ref}).Decode(&collection); err == mongo.ErrNoDocuments {
 		// ancestor collection not found.
 		return nil, errNotFound
 	} else if err != nil {
@@ -220,7 +226,7 @@ func (c *client) getFromAncestor(ctx context.Context, ref string, query data.Que
 
 	// try find one ancestor collection.
 	var collection bson.M
-	if err := c.Database(flakbase).Collection(collTable).FindOne(ctx, bson.M{"_id": bson.M{"$in": subPaths}}).Decode(&collection); err == mongo.ErrNoDocuments {
+	if err := c.CollectionTable().FindOne(ctx, bson.M{"_id": bson.M{"$in": subPaths}}).Decode(&collection); err == mongo.ErrNoDocuments {
 		// ancestor collection not found.
 		return nil, errNotFound
 	} else if err != nil {
@@ -286,7 +292,7 @@ func (c *client) getFromDescendant(ctx context.Context, ref string, query data.Q
 	}
 
 	// find matched collections.
-	cursor, err := c.Database(flakbase).Collection(collTable).Find(ctx, bson.M{"_id": bson.M{"$regex": regex}})
+	cursor, err := c.CollectionTable().Find(ctx, bson.M{"_id": bson.M{"$regex": regex}})
 	if err != nil {
 		return nil, fmt.Errorf("failed to find descendant collections for %s: %v", ref, err)
 	}
@@ -414,7 +420,7 @@ func (c *client) getWithQuery(ctx context.Context, ref string, query data.Query)
 	}
 
 	// find the documents with query.
-	cursor, err := c.Database(flakbase).Collection(hash(ref)).Find(ctx, filter, option)
+	cursor, err := c.Database().Collection(hash(ref)).Find(ctx, filter, option)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get %s: %v", ref, err)
 	}
@@ -455,7 +461,7 @@ func (c *client) createIndex(ctx context.Context, ref string, indexes []string) 
 			Keys: bson.M{index: 1},
 		}
 	}
-	result, err := c.Database(flakbase).Collection(hash(ref)).Indexes().CreateMany(ctx, indexModels)
+	result, err := c.Database().Collection(hash(ref)).Indexes().CreateMany(ctx, indexModels)
 	if err != nil {
 		log.Printf("failed to create index for %s: %v", ref, err)
 		return

@@ -46,7 +46,11 @@ func NewHandler(c *Config) (Handler, error) {
 	// decide the db to use by config.
 	var db db.DB
 	if c.Mongo != "" {
-		db = mongodb.NewDB(c.Mongo)
+		mongo, err := mongodb.NewDB(c.Mongo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create mongo db %s: %v", c.Mongo, err)
+		}
+		db = mongo
 	} else {
 		db = memory.NewDB()
 	}

@@ -31,23 +31,16 @@ func (s *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check restful api supported.
-	if s.Rest {
-		// TODO: enable cors now.
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+	// serve restful api.
+	// TODO: enable cors now.
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		if err := s.serveRestful(ctx, w, r); err != nil {
-			// not handled error.
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-		}
-		return
+	if err := s.serveRestful(ctx, w, r); err != nil {
+		// not handled error.
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 	}
-
-	// restful not supported.
-	w.WriteHeader(http.StatusNotImplemented)
-	w.Write([]byte("Restful api not supported\n"))
 }
 
 func (s *handler) serveWebsocket(ctx context.Context, w http.ResponseWriter, r *http.Request) error {

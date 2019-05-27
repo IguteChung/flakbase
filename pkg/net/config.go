@@ -15,7 +15,6 @@ const DefaultPort = ":9527"
 // Config defines the args for a Flakbase server.
 type Config struct {
 	Host  string
-	Rest  bool
 	Rule  string
 	Mongo string
 }

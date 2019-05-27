@@ -99,7 +99,7 @@ func TestMemoryHandlerSuite(t *testing.T) {
 
 func TestMongoHandlerSuite(t *testing.T) {
 	handler, err := NewHandler(&Config{
-		Mongo: "mongodb://localhost:27017",
+		Mongo: "testdata/mongo.json",
 	})
 	if err != nil {
 		t.Fatalf("unable to new mongo handler: %v", err)
