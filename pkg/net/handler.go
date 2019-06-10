@@ -86,33 +86,44 @@ func (s *handler) serveWebsocket(ctx context.Context, w http.ResponseWriter, r *
 		}
 		log.Printf("[message received] %+v: %+v", conn.RemoteAddr(), r)
 
-		// handle the request by request type.
-		result := &store.ListenResult{}
-		switch r.Type {
-		case data.TypeSet:
-			err = s.datastore.HandleSet(ctx, r.Ref, r.Data)
-		case data.TypeUpdate:
-			err = s.datastore.HandleUpdate(ctx, r.Ref, r.Data)
-		case data.TypeListen:
-			result, err = s.datastore.HandleListen(ctx, r.Ref, r.Query, ch)
-			defer s.datastore.HandleUnlisten(ctx, r.Ref, r.Query, ch)
-		case data.TypeUnlisten:
-			err = s.datastore.HandleUnlisten(ctx, r.Ref, r.Query, ch)
-		case data.TypeIdle:
-			// send idle message.
-			if err := send(data.IdleMessage{}); err != nil {
-				return fmt.Errorf("failed to send idle message: %v", err)
+		// handle the request asynchronously.
+		go func() {
+			// handle the request by request type.
+			var err error
+			result := &store.ListenResult{}
+			switch r.Type {
+			case data.TypeSet:
+				err = s.datastore.HandleSet(ctx, r.Ref, r.Data)
+			case data.TypeUpdate:
+				err = s.datastore.HandleUpdate(ctx, r.Ref, r.Data)
+			case data.TypeListen:
+				result, err = s.datastore.HandleListen(ctx, r.Ref, r.Query, ch)
+				defer s.datastore.HandleUnlisten(ctx, r.Ref, r.Query, ch)
+			case data.TypeUnlisten:
+				err = s.datastore.HandleUnlisten(ctx, r.Ref, r.Query, ch)
+			case data.TypeIdle:
+				// send idle message.
+				if err := send(data.IdleMessage{}); err != nil {
+					log.Printf("failed to send idle message: %v", err)
+				}
+				return
 			}
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("failed to handle request %+v: %v", r, err)
+			if err != nil {
+				// request not properly handled.
+				log.Printf("failed to handle request %+v: %v", r, err)
+			}
+
+			// send ok message.
+			if err := send(data.OkMessage{RequestID: r.RequestID, NoIndex: result.NoIndex}); err != nil {
+				log.Printf("failed to send ok message: %v", err)
+			}
+		}()
+
+		// unlisten if connection broke.
+		if r.Type == data.TypeListen {
+			defer s.datastore.HandleUnlisten(ctx, r.Ref, r.Query, ch)
 		}
 
-		// send ok message if properly handled.
-		if err := send(data.OkMessage{RequestID: r.RequestID, NoIndex: result.NoIndex}); err != nil {
-			return fmt.Errorf("failed to send ok message: %v", err)
-		}
 	}
 }
 
